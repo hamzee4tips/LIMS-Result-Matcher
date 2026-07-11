@@ -1,5 +1,5 @@
 #define MyAppName "HI Result Finder"
-#define MyAppVersion "3.0.0"
+#define MyAppVersion "3.0.1"
 #define MyAppPublisher "Hamza Isah"
 #define MyAppURL "https://github.com/hamzee4tips"
 #define MyAppExeName "HI Result Finder.exe"
@@ -17,7 +17,7 @@ DefaultDirName={autopf}\HI Result Finder
 DefaultGroupName=HI Result Finder
 
 OutputDir=release
-OutputBaseFilename=HI_Result_Finder_v3.0_Setup
+OutputBaseFilename=HI_Result_Finder_v3.0.1_Setup
 
 Compression=lzma
 SolidCompression=yes

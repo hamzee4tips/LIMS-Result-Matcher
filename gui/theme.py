@@ -8,7 +8,7 @@ import customtkinter as ctk
 APP_NAME = "LIMS Result Matcher"
 APP_SUBTITLE = "National Laboratory Result Matching System"
 DEVELOPER = "Hamza Isah"
-VERSION = "3.0"
+VERSION = "3.0.1"
 
 # Appearance
 ctk.set_appearance_mode("dark")

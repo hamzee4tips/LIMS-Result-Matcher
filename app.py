@@ -4,6 +4,7 @@ Application Entry Point
 """
 
 import customtkinter as ctk
+from core.logger import setup_logger
 from tkinterdnd2 import TkinterDnD
 
 from gui.dashboard import Dashboard
@@ -38,7 +39,8 @@ class App(TkinterDnD.Tk):
 
 
 if __name__ == "__main__":
-
+    
+    setup_logger()
     app = App()
 
     app.mainloop()

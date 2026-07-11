@@ -1,6 +1,6 @@
 {
-    "excel_file": "C:/Result/PENDING_RESULT.xlsx",
-    "pdf_file": "C:/Users/ihamza.CIHPNG/Downloads/CSCC_Sample.pdf",
-    "output_folder": "C:/Users/ihamza.CIHPNG/Downloads/CDC Visit PBS",
+    "excel_file": "C:/Result/CSCC_PENDING_RESULT.xlsx",
+    "pdf_file": "C:/Result/CSCC_RESULTS_2.pdf",
+    "output_folder": "C:/Result/Found_Results",
     "theme": "dark"
 }
