@@ -42,7 +42,9 @@ DEFAULT_SETTINGS = {
 
     "output_folder": "",
 
-    "theme": "dark"
+    "theme": "dark",
+
+    "search_year": "All Years"
 
 }
 

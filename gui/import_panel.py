@@ -84,6 +84,41 @@ class ImportPanel(ctk.CTkFrame):
         )
 
         # =====================================================
+        # Search Year
+        # =====================================================
+
+        ctk.CTkLabel(
+        self,
+        text="Search Year",
+        font=("Segoe UI", 12, "bold")
+        ).pack(
+        anchor="w",
+        padx=15,
+        pady=(8, 2)
+        )
+
+        self.dashboard.search_year = ctk.StringVar(
+        value=self.dashboard.settings.get(
+        "search_year",
+        "All Years"
+        )
+        )
+
+        self.year_combo = ctk.CTkComboBox(
+        self,
+    variable=self.dashboard.search_year,
+    values=[
+        "All Years",
+    ],
+    width=180
+        )
+
+        self.year_combo.pack(
+            anchor="w",
+            padx=15,
+            pady=(0, 10)
+        )
+        # =====================================================
         # Drag & Drop
         # =====================================================
 

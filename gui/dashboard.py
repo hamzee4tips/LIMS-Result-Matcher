@@ -1,137 +1,191 @@
 """
-Main Dashboard
+HI Result Finder
+Dashboard Controller
+
+Version : 3.1.0
+Developer : Hamza Isah
+
+The Dashboard acts as the controller for the application.
+It coordinates all UI components and backend services.
+
+No other class should manipulate another class directly.
+Everything is routed through Dashboard.
 """
 
+import logging
 import customtkinter as ctk
-
-from .theme import *
-
-from .sidebar import Sidebar
-from .toolbar import Toolbar
-from .statusbar import StatusBar
-from .progress_panel import ProgressPanel
-from .log_panel import LogPanel
-from .completion_dialog import CompletionDialog
-from .import_panel import ImportPanel
+from gui.statistics_panel import StatisticsPanel
+from gui.progress_panel import ProgressPanel
+from tkinter import messagebox
+from version import *
 
 from core.settings import SettingsManager
+from core.logger import setup_logger
+
 from core.matcher import Matcher
-from .file_selector import FileSelector
+from gui.file_selector import FileSelector
+from gui.import_panel import ImportPanel
+
+WINDOW_WIDTH = 1400
+WINDOW_HEIGHT = 850
+
+# (Will be added in Part 2)
+# from gui.loading_popup import LoadingPopup
 
 
 class Dashboard:
+
+    # ==========================================================
+    # Constructor
+    # ==========================================================
 
     def __init__(self, root):
 
         self.root = root
 
+        # ------------------------------------------------------
+        # Settings
+        # ------------------------------------------------------
+
         self.settings = SettingsManager.load()
 
-        self.selector = FileSelector()
+        self.search_year = ctk.StringVar(
+            value=self.settings.get(
+                "search_year",
+                "All Years"
+            )
+        )
 
-        self.matcher = Matcher(self)
+        self.available_years = []
 
-        # --------------------------------------------------
+        # ------------------------------------------------------
+        # Logging
+        # ------------------------------------------------------
+
+        setup_logger()
+
+        logging.info("=" * 70)
+        logging.info("Creating Dashboard")
+        logging.info("=" * 70)
+
+        # ------------------------------------------------------
+        # Window
+        # ------------------------------------------------------
 
         self.root.title(APP_NAME)
 
-        self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
+        self.root.geometry(("1400x850"))
 
-        self.root.minsize(1250, 760)
-
-        # --------------------------------------------------
-        # Sidebar
-        # --------------------------------------------------
-
-        self.sidebar = Sidebar(self.root)
-
-        self.sidebar.pack(
-            side="left",
-            fill="y"
+        self.root.minsize(
+            1250,
+            760
         )
 
-        # --------------------------------------------------
+        # ------------------------------------------------------
+        # Theme
+        # ------------------------------------------------------
+
+        ctk.set_appearance_mode(
+            self.settings.get(
+                "theme",
+                "dark"
+            )
+        )
+
+        # ------------------------------------------------------
+        # Runtime Objects
+        # ------------------------------------------------------
+
+        self.loading_popup = None
+
+        self.selector = FileSelector(self)
+
+        self.matcher = Matcher(self)
+
+        # ------------------------------------------------------
+        # Runtime Variables
+        # ------------------------------------------------------
+
+        self.excel_entry = None
+
+        self.pdf_entry = None
+
+        self.output_entry = None
+
+        self.import_panel = None
+
+        self.status_label = None
+
+        self.log_box = None
+
+        self.progress_bar = None
+
+        # ------------------------------------------------------
+        # Build Interface
+        # ------------------------------------------------------
+
+        self.build_interface()
+
+        logging.info("Dashboard created successfully.")
+        # ==========================================================
+        # Build Interface
+        # ==========================================================
+
+    def build_interface(self):
+
+        logging.info("=" * 70)
+        logging.info("Building Dashboard Interface")
+        logging.info("=" * 70)
+
+        # ------------------------------------------------------
         # Main Container
-        # --------------------------------------------------
+        # ------------------------------------------------------
 
-        self.main = ctk.CTkFrame(
+        self.main_frame = ctk.CTkFrame(
             self.root,
-            fg_color=BACKGROUND
+            corner_radius=0
         )
 
-        self.main.pack(
-            side="left",
+        self.main_frame.pack(
             fill="both",
             expand=True
         )
 
-        # --------------------------------------------------
-        # Toolbar
-        # --------------------------------------------------
-
-        self.toolbar = Toolbar(
-            self.main,
-            self
-        )
-
-        self.toolbar.pack(
-            fill="x",
-            padx=15,
-            pady=(15, 10)
-        )
-
-        # --------------------------------------------------
-        # Workspace
-        # --------------------------------------------------
-
-        self.workspace = ctk.CTkFrame(
-            self.main,
-            fg_color="transparent"
-        )
-
-        self.workspace.pack(
-            fill="both",
-            expand=True,
-            padx=15,
-            pady=(0, 10)
-        )
-
-        # ==================================================
-        # LEFT SIDE
-        # ==================================================
+        # ------------------------------------------------------
+        # Left Panel
+        # ------------------------------------------------------
 
         self.left_panel = ctk.CTkFrame(
-            self.workspace,
-            corner_radius=12
+            self.main_frame,
+            width=430,
+            corner_radius=0
         )
 
         self.left_panel.pack(
             side="left",
-            fill="both",
-            expand=True,
-            padx=(0, 10)
+            fill="y"
         )
 
-        # ==================================================
-        # RIGHT SIDE
-        # ==================================================
+        self.left_panel.pack_propagate(False)
+
+        # ------------------------------------------------------
+        # Right Panel
+        # ------------------------------------------------------
 
         self.right_panel = ctk.CTkFrame(
-            self.workspace,
-            width=340,
-            corner_radius=12
+            self.main_frame,
+            corner_radius=0
         )
 
         self.right_panel.pack(
             side="right",
-            fill="y"
+            fill="both",
+            expand=True
         )
 
-        self.right_panel.pack_propagate(False)
-
-        # ==================================================
+        # ------------------------------------------------------
         # Import Panel
-        # ==================================================
+        # ------------------------------------------------------
 
         self.import_panel = ImportPanel(
             self.left_panel,
@@ -144,36 +198,95 @@ class Dashboard:
             pady=15
         )
 
-        # ==================================================
-        # Activity Log
-        # ==================================================
 
-        self.log_panel = LogPanel(
-            self.left_panel
+        # ------------------------------------------------------
+        # Activity Log Header
+        # ------------------------------------------------------
+
+        header = ctk.CTkLabel(
+            self.right_panel,
+            text="Activity Log",
+            font=("Segoe UI", 20, "bold")
         )
 
-        self.log_panel.pack(
+        header.pack(
+            anchor="w",
+            padx=20,
+            pady=(20, 10)
+        )
+
+        # ------------------------------------------------------
+        # Log Window
+        # ------------------------------------------------------
+
+        self.log_box = ctk.CTkTextbox(
+            self.right_panel,
+            wrap="word",
+            font=("Consolas", 12)
+        )
+
+        self.log_box.pack(
             fill="both",
             expand=True,
-            padx=15,
+            padx=20,
             pady=(0, 15)
         )
 
-        self.log(
-            "Dashboard loaded successfully."
+        self.log_box.configure(
+            state="disabled"
         )
 
-        self.log(
-            "Ready."
-        )
+        # ------------------------------------------------------
+        # Progress Bar
+        # ------------------------------------------------------
 
-        # ==================================================
-        # Progress
-        # ==================================================
-
-        self.progress_panel = ProgressPanel(
+        self.progress_bar = ctk.CTkProgressBar(
             self.right_panel
         )
+
+        self.progress_bar.pack(
+            fill="x",
+            padx=20,
+            pady=(0, 10)
+        )
+
+        self.progress_bar.set(0)
+
+        # ------------------------------------------------------
+        # Status Bar
+        # ------------------------------------------------------
+
+        status_frame = ctk.CTkFrame(
+            self.right_panel,
+            height=35,
+            corner_radius=8
+        )
+
+        status_frame.pack(
+            fill="x",
+            padx=20,
+            pady=(0, 20)
+        )
+
+        self.status_label = ctk.CTkLabel(
+            status_frame,
+            text="Ready",
+            anchor="w"
+        )
+
+        self.status_label.pack(
+            side="left",
+            padx=15,
+            pady=8
+        )
+
+        logging.info("Dashboard interface created.")
+
+    # ==========================================================
+    # Progress Panel
+    # ==========================================================
+
+        self.progress_panel = ProgressPanel(self.right_panel)
 
         self.progress_panel.pack(
             fill="x",
@@ -181,109 +294,42 @@ class Dashboard:
             pady=(15, 10)
         )
 
-        self.progress_panel.update_progress(
-            0,
-            "Waiting..."
-        )
-
-        # ==================================================
-        # Statistics
-        # ==================================================
-
-        stats = ctk.CTkFrame(
-            self.right_panel
-        )
-
-        stats.pack(
-            fill="x",
-            padx=15,
-            pady=10
-        )
-
-        self.found_card = self.card(
-            stats,
-            "Found",
-            "0"
-        )
-
-        self.missing_card = self.card(
-            stats,
-            "Missing",
-            "0"
-        )
-
-        self.duplicate_card = self.card(
-            stats,
-            "Duplicate",
-            "0"
-        )
-
-        self.unreadable_card = self.card(
-            stats,
-            "Unreadable",
-            "0"
-        )
-
-        # ==================================================
-        # Status
-        # ==================================================
-
-        self.status = StatusBar(
-            self.main
-        )
-
-        self.status.pack(
-            side="bottom",
-            fill="x"
-        )
     # ==========================================================
-    # Statistics Card
+    # Statistics Panel
     # ==========================================================
 
-    def card(self, parent, title, value):
-
-        frame = ctk.CTkFrame(
-            parent,
-            width=145,
-            height=85,
-            corner_radius=10
+        self.statistics_panel = StatisticsPanel(
+        self.right_panel
         )
 
-        frame.pack(
-            fill="x",
-            padx=8,
-            pady=6
-        )
-
-        frame.pack_propagate(False)
-
-        ctk.CTkLabel(
-            frame,
-            text=title,
-            font=FONT_CARD_TITLE
-        ).pack(
-            pady=(10, 0)
-        )
-
-        value_label = ctk.CTkLabel(
-            frame,
-            text=value,
-            font=FONT_CARD_VALUE
-        )
-
-        value_label.pack(expand=True)
-
-        return value_label
-
+        self.statistics_panel.pack(
+    fill="x",
+    padx=15,
+    pady=(0, 10)
+)
     # ==========================================================
-    # Logging
+    # Activity Log
     # ==========================================================
 
     def log(self, message):
 
-        if hasattr(self, "log_panel"):
+        logging.info(message)
 
-            self.log_panel.write(message)
+        if self.log_box is None:
+            return
+
+        self.log_box.configure(state="normal")
+
+        self.log_box.insert(
+            "end",
+            f"{message}\n"
+        )
+
+        self.log_box.see("end")
+
+        self.log_box.configure(state="disabled")
+
+        self.root.update_idletasks()
 
     # ==========================================================
     # Status
@@ -291,210 +337,110 @@ class Dashboard:
 
     def set_status(self, message):
 
-        if hasattr(self, "status"):
+        if self.status_label:
 
-            self.status.set_text(message)
-
-        if hasattr(self, "toolbar"):
-
-            try:
-
-                self.toolbar.set_status(message)
-
-            except Exception:
-
-                pass
-
-    # ==========================================================
-    # Statistics
-    # ==========================================================
-
-    def update_statistics(
-
-        self,
-
-        found,
-
-        missing,
-
-        duplicate,
-
-        unreadable
-
-    ):
-
-        self.root.after(
-
-            0,
-
-            lambda: self.found_card.configure(
-
-                text=str(found)
-
+            self.status_label.configure(
+                text=message
             )
 
-        )
-
-        self.root.after(
-
-            0,
-
-            lambda: self.missing_card.configure(
-
-                text=str(missing)
-
-            )
-
-        )
-
-        self.root.after(
-
-            0,
-
-            lambda: self.duplicate_card.configure(
-
-                text=str(duplicate)
-
-            )
-
-        )
-
-        self.root.after(
-
-            0,
-
-            lambda: self.unreadable_card.configure(
-
-                text=str(unreadable)
-
-            )
-
-        )
+        self.root.update_idletasks()
 
     # ==========================================================
     # Progress
     # ==========================================================
 
-    def update_progress(
+    def set_progress(self, value):
 
+        if self.progress_bar:
+
+            value = max(
+                0,
+                min(1, value)
+            )
+
+            self.progress_bar.set(value)
+
+        self.root.update_idletasks()
+    # ==========================================================
+    # Statistics
+    # ==========================================================
+
+    def update_statistics(
         self,
+        found,
+        missing,
+        duplicate,
+        unreadable
+            ):
 
-        percent,
+        self.statistics_panel.update(
+        found,
+        missing,
+        duplicate,
+        unreadable
+            )
 
-        message=""
+        self.root.update_idletasks()
 
+    # ==========================================================
+    # Year List
+    # ==========================================================
+
+    def update_year_list(self, years):
+
+        self.available_years = years
+
+        values = ["All Years"] + years
+
+        self.import_panel.year_combo.configure(
+            values=values
+        )
+
+        self.import_panel.year_combo.set(
+            "All Years"
+        )
+
+        self.search_year.set(
+            "All Years"
+        )
+
+        self.settings["search_year"] = "All Years"
+
+        SettingsManager.save(
+            self.settings
+        )
+
+        if years:
+
+            self.log(
+                "Detected Collection Years: "
+                + ", ".join(years)
+            )
+
+        else:
+
+            self.log(
+                "No collection years detected."
+            )
+
+    # ==========================================================
+    # Loading Popup
+    # ==========================================================
+
+    def show_loading_popup(
+        self,
+        title="Please wait...",
+        message="Processing..."
     ):
 
-        if hasattr(
+        # LoadingPopup will be added in Phase 2.
+        # Placeholder for now.
 
-            self,
+        self.set_status(message)
 
-            "progress_panel"
+        self.log(message)
 
-        ):
-
-            self.progress_panel.update_progress(
-
-                percent,
-
-                message
-
-            )
-    # ==========================================================
-    # Start Matching
-    # ==========================================================
-
-    def start_matching(self):
-
-        excel = self.excel_entry.get().strip()
-        pdf = self.pdf_entry.get().strip()
-        output = self.output_entry.get().strip()
-
-        if not excel:
-
-            self.log("Please select an Excel file.")
-            self.set_status("Excel file required.")
-
-            return
-
-        if not pdf:
-
-            self.log("Please select a PDF file.")
-            self.set_status("PDF file required.")
-
-            return
-
-        if not output:
-
-            self.log("Please select an output folder.")
-            self.set_status("Output folder required.")
-
-            return
-
-        self.settings["excel_file"] = excel
-        self.settings["pdf_file"] = pdf
-        self.settings["output_folder"] = output
-
-        SettingsManager.save(self.settings)
-
-        self.log("----------------------------------------")
-        self.log("Matching process started.")
-        self.log(f"Excel : {excel}")
-        self.log(f"PDF    : {pdf}")
-        self.log(f"Output : {output}")
-        self.log("----------------------------------------")
-
-        self.set_status("Matching...")
-
-        try:
-
-            self.matcher.start()
-
-        except Exception as e:
-
-            self.log(f"ERROR: {e}")
-
-            self.set_status("Failed")
-
-    # ==========================================================
-    # Completion Dialog
-    # ==========================================================
-
-    def show_completion(self, result):
-
-        try:
-
-            CompletionDialog(
-
-                self.root,
-
-                result,
-
-                self.output_entry.get().strip()
-
-            )
-
-        except Exception as e:
-
-            self.log(f"Completion dialog error: {e}")
-
-    # ==========================================================
-    # Reset Dashboard
-    # ==========================================================
-
-    def reset_dashboard(self):
-
-        self.update_progress(
-            0,
-            "Waiting..."
-        )
-
-        self.update_statistics(
-            0,
-            0,
-            0,
-            0
-        )
+    def hide_loading_popup(self):
 
         self.set_status("Ready")
 
@@ -535,21 +481,77 @@ class Dashboard:
             pass
 
     # ==========================================================
-    # Matching Callbacks
+    # Start Matching
     # ==========================================================
 
-    def matching_started(self):
+    def start_matching(self):
 
         self.disable_controls()
 
+        self.set_progress(0)
+
         self.set_status(
-            "Matching..."
+            "Starting matcher..."
         )
 
-    def matching_finished(self):
+        self.log(
+            "Starting matching process..."
+        )
+
+        self.matcher.start()
+
+    # ==========================================================
+    # Matching Finished
+    # ==========================================================
+
+    def matching_finished(
+        self,
+        found,
+        missing,
+        unreadable
+    ):
 
         self.enable_controls()
+
+        self.set_progress(1)
 
         self.set_status(
             "Completed"
         )
+
+        self.log("")
+
+        self.log("=" * 45)
+
+        self.log("Processing Completed")
+
+        self.log("=" * 45)
+
+        self.log(f"Found      : {found}")
+
+        self.log(f"Missing    : {missing}")
+
+        self.log(f"Unreadable : {unreadable}")
+
+        messagebox.showinfo(
+
+            "HI Result Finder",
+
+            (
+                "Processing Completed Successfully.\n\n"
+                f"Found: {found}\n"
+                f"Missing: {missing}\n"
+                f"Unreadable: {unreadable}"
+            )
+
+        )
+
+    # ==========================================================
+    # Shutdown
+    # ==========================================================
+
+    def shutdown(self):
+
+        logging.info("Application Closed")
+
+        self.root.destroy()

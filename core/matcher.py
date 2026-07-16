@@ -98,11 +98,12 @@ class Matcher:
             excel = self.dashboard.excel_entry.get().strip()
             pdf = self.dashboard.pdf_entry.get().strip()
             output = self.dashboard.output_entry.get().strip()
+            search_year = self.dashboard.search_year.get().strip()
 
             logging.info(f"Excel : {excel}")
             logging.info(f"PDF   : {pdf}")
             logging.info(f"Output: {output}")
-
+            logging.info(f"Search Year : {search_year}")
             # ----------------------------------------------
 
             if not excel:
@@ -143,6 +144,7 @@ class Matcher:
                 excel=excel,
                 pdf=pdf,
                 output=output,
+                search_year=search_year,
                 progress_callback=self.update_progress,
                 log_callback=self.log,
                 stop_callback=lambda: not self.running

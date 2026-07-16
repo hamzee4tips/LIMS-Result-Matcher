@@ -6,9 +6,9 @@ APP_NAME = "LIMS Result Matcher"
 
 APP_BRAND = "HI Result Finder"
 
-VERSION = "3.0.1"
+VERSION = "3.1"
 
-BUILD = "002"
+BUILD = "003"
 
 RELEASE_DATE = "July 2026"
 

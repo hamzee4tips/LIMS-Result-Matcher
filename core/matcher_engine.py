@@ -13,6 +13,7 @@ import pandas as pd
 from pypdf import PdfReader, PdfWriter
 
 
+
 # ===========================================================
 # Utility Functions
 # ===========================================================
@@ -61,6 +62,47 @@ def extract(text):
 
     return None
 
+# ===========================================================
+# Collection Year Detector
+# ===========================================================
+
+COLLECTION_DATE_PATTERN = re.compile(
+    r"Collection\s*Date\.?\s*[:\-]?\s*(\d{4})[-/]\d{2}[-/]\d{2}",
+    re.IGNORECASE
+)
+
+RECEIVED_DATE_PATTERN = re.compile(
+    r"DATE\s+RECIEVED\s+AT\s+PCR\s+LAB\s*(\d{4})[-/]\d{2}[-/]\d{2}",
+    re.IGNORECASE
+)
+
+
+def extract_collection_year(text):
+    """
+    Extract the laboratory result year from a report page.
+
+    Priority:
+        1. Collection Date
+        2. Date Received at PCR Lab
+
+    Returns:
+        "2024", "2025", etc.
+        or None if not found.
+    """
+
+    text = text or ""
+
+    match = COLLECTION_DATE_PATTERN.search(text)
+
+    if match:
+        return match.group(1)
+
+    match = RECEIVED_DATE_PATTERN.search(text)
+
+    if match:
+        return match.group(1)
+
+    return None
 
 # ===========================================================
 # Excel Loader
@@ -126,6 +168,8 @@ def run(
 
         output,
 
+        search_year="All Years",
+
         sheet=None,
 
         id_column="PepID",
@@ -158,6 +202,14 @@ def run(
         filemode="w"
 
     )
+    logging.info("=" * 70)
+    logging.info("MATCHER ENGINE STARTED")
+    logging.info("=" * 70)
+
+    logging.info(f"Excel File   : {excel}")
+    logging.info(f"PDF File     : {pdf}")
+    logging.info(f"Output Folder: {output}")
+    logging.info(f"Search Year  : {search_year}")
 
     pending = load_pending(
 
@@ -181,12 +233,19 @@ def run(
 
     summary = {}
 
+    pages_scanned = 0
+
+    pages_skipped = 0
+
     if log_callback:
         log_callback(f"Loaded {len(pending)} pending IDs.")
+    
+    if log_callback:
+        log_callback(f"Search Year : {search_year}")
 
     if log_callback:
         log_callback(f"Scanning {total_pages} pages...")
-            # ===========================================================
+    # ===========================================================
     # Scan PDF
     # ===========================================================
 
@@ -217,13 +276,26 @@ def run(
         except Exception:
 
             unreadable.append(page_number)
-
             continue
+
+        # ======================================================
+        # Year Filter
+        # ======================================================
+
+        if search_year != "All Years":
+
+            page_year = extract_collection_year(text)
+
+            if page_year != search_year:
+
+                pages_skipped += 1
+                continue
+
+        pages_scanned += 1
 
         pepid = extract(text)
 
         if debug:
-
             logging.info(
                 "Page %s -> %s",
                 page_number,
@@ -231,13 +303,10 @@ def run(
             )
 
         if not pepid:
-
             unreadable.append(page_number)
-
             continue
 
         if pepid not in pending:
-
             continue
 
         found.setdefault(
@@ -441,6 +510,8 @@ def run(
         log_callback(f"Found       : {len(found)}")
         log_callback(f"Missing     : {len(missing)}")
         log_callback(f"Unreadable  : {len(unreadable)}")
+        log_callback(f"Pages Scanned : {pages_scanned}")
+        log_callback(f"Pages Skipped : {pages_skipped}")
 
     logging.info("Processing completed successfully.")
 
@@ -451,6 +522,10 @@ def run(
         "missing": len(missing),
 
         "unreadable": len(unreadable),
+
+        "pages_scanned": pages_scanned,
+
+        "pages_skipped": pages_skipped,
 
         "summary_report": str(
             output / "Summary_Report.xlsx"
